@@ -6,7 +6,7 @@ services:
       - "1883:1883"
       - "9001:9001"
     volumes:
-      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./app/backend/messaging/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
 
   kafka:
     image: apache/kafka:3.9.2
@@ -42,7 +42,7 @@ services:
     image: postgres:16
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_DB: edge_sensor
       POSTGRES_USER: postgres
