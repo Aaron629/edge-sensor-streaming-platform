@@ -2,9 +2,9 @@
 
 ## 📌 專案簡介
 
-本專案實作一套 IoT 即時資料串流平台，  
-模擬感測器資料從裝置端（ESP32）出發，透過 MQTT 與 Kafka 進行傳輸與串流處理，  
-最終落地至 PostgreSQL，並提供 API 與 Dashboard 進行資料查詢與視覺化分析。
+本專案實作一套 **IoT 即時資料串流平台（Real-time Streaming Pipeline）**，  
+模擬感測器資料從裝置端（ESP32 / Python Publisher）出發，透過 MQTT 與 Kafka 進行傳輸與串流處理，  
+最終落地至 PostgreSQL，並透過 FastAPI 提供服務層支援。
 
 ---
 
@@ -32,28 +32,26 @@ Dashboard
 
 ## 🛠 技術棧
 
-- **Device / Publisher**
-  - ESP32（Arduino / PlatformIO）
-  - Python（模擬資料）
+### 🔌 Device / Publisher
+- ESP32（Arduino / PlatformIO）
+- Python（模擬感測資料）
 
-- **Messaging / Streaming**
-  - MQTT（Mosquitto）
-  - Kafka
+### 📡 Messaging / Streaming
+- MQTT（Mosquitto）
+- Kafka（KRaft mode）
+- kafka-python
+- paho-mqtt
 
-- **Backend**
-  - FastAPI
-  - kafka-python
-  - paho-mqtt
+### ⚙️ Backend
+- FastAPI
+- SQLAlchemy
 
-- **Database**
-  - PostgreSQL
+### 🗄 Database
+- PostgreSQL
 
-- **Visualization（規劃中）**
-  - Streamlit / React
-
-- **Environment**
-  - Docker Compose
-  - Python venv
+### 🧪 Environment
+- Docker Compose
+- Python venv
 
 ---
 
@@ -67,39 +65,97 @@ Dashboard
 
 ---
 
-## 📦 專案結構
+## 📂 專案結構
 
-
+```text
 edge-sensor-streaming-platform/
-├─ backend/
-│ ├─ app/ # FastAPI
-│ ├─ consumers/ # Kafka consumer
-│ ├─ bridges/ # MQTT → Kafka
-│ ├─ requirements.txt
+├── app/
+│   ├── backend/
+│   │   ├── api/                     # FastAPI API（未來擴充）
+│   │   ├── config/                  # 設定管理
+│   │   │   └── settings.py
+│   │   │
+│   │   ├── database/                # 資料庫相關
+│   │   │   ├── models/              # ORM Model
+│   │   │   │   └── sensor_data.py
+│   │   │   ├── repositories/        # 資料存取層（CRUD）
+│   │   │   │   └── sensor_repository.py
+│   │   │   └── connection.py        # DB 連線設定
+│   │   │
+│   │   ├── messaging/               # 訊息處理（MQTT / Kafka）
+│   │   │   ├── bridges/             # MQTT → Kafka
+│   │   │   │   └── mqtt_to_kafka.py
+│   │   │   │
+│   │   │   ├── kafka/
+│   │   │   │   ├── consumers/       # Kafka Consumer（落地 DB）
+│   │   │   │   │   └── sensor_consumer.py
+│   │   │   │   └── producers/       # Kafka Producer（預留）
+│   │   │   │
+│   │   │   └── mqtt/
+│   │   │       ├── publisher/       # MQTT Publisher（模擬裝置）
+│   │   │       │   └── mqtt_publisher.py
+│   │   │       └── mosquitto.conf   # MQTT Broker 設定
+│   │
+│   └── main.py                     # FastAPI entrypoint（含 lifespan + consumer）
 │
-├─ docker-compose.yml # Kafka / MQTT / DB
-├─ README.md
-└─ docs/ # 架構文件（未來）
+├── dashboard/                      # 儀表板（未來實作）
+├── doc/                            # 文件（架構 / 設計）
+├── esp32/                          # ESP32 程式（實體裝置）
+│
+├── mqtt/                           # MQTT 相關設定（若有額外配置）
+│
+├── docker-compose.yml              # Kafka / MQTT / PostgreSQL
+├── .env                            # 環境變數
+├── requirements.txt                # Python 套件
+├── README.md
+└── .gitignore
 
 
 ---
 
 ## 🚀 快速啟動（開發中）
 
-### 1️⃣ 建立虛擬環境
+### 1️⃣ 啟動基礎服務（MQTT / Kafka / DB）
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate
+docker compose up -d
 ```
-### 2️⃣ 安裝套件
+### 2️⃣ 建立 Python 環境
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
-### 3️⃣ 啟動服務（未完成）
+### 3️⃣ 啟動 FastAPI（含 Kafka Consumer）
 ```bash
-docker-compose up -d
+uvicorn app.main:app --reload --port 8081
 ```
+### 4️⃣ 啟動 Publisher（模擬資料）
+```bash
+python -m app.backend.messaging.mqtt.publisher.mqtt_publisher
+```
+
+🎯 專案亮點
+🔥 Event-Driven Architecture
+
+使用 Kafka 作為資料中介，實現鬆耦合資料流
+
+🔥 Streaming Pipeline
+
+資料從裝置即時流入資料庫（非批次處理）
+
+🔥 Schema + Raw Data 設計
+
+同時支援：
+
+查詢效率（結構化欄位）
+完整回溯（raw_payload）
+🔥 IoT + Data Engineering 整合
+
+整合：
+
+MQTT（IoT）
+Kafka（Streaming）
+PostgreSQL（Storage）
 
 
 📡 資料格式（範例）
@@ -112,10 +168,16 @@ docker-compose up -d
 }
 
 🗺 未來規劃
- MQTT Publisher（ESP32 / Python）
- MQTT → Kafka Bridge
- Kafka Consumer（寫入 PostgreSQL）
- FastAPI 查詢 API
- Dashboard 視覺化（即時監控）
- Databricks 資料分析（Bronze / Silver / Gold）
- 告警系統（Alerting）
+🔹 API 層
+ /sensor/latest
+ /sensor/history
+ /sensor/stats
+🔹 Dashboard
+ 即時監控（溫度 / 濕度 / 震動）
+ Grafana / Streamlit / React
+🔹 Data Engineering
+ Databricks（Bronze / Silver / Gold）
+ 批次與流式分析整合
+🔹 Alerting 系統
+ 溫度 / 震動異常偵測
+ Kafka-based alert pipeline
