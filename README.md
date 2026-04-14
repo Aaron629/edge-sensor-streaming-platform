@@ -11,22 +11,23 @@
 ## 🧠 系統架構
 
 
-ESP32 / Python Publisher
-↓
-MQTT Broker
-↓
-MQTT → Kafka Bridge
-↓
-Kafka
-↓
-Kafka Consumer
-↓
-PostgreSQL
-↓
-FastAPI
-↓
-Dashboard
-
+```text
+[ESP32 / Python Publisher]
+            ↓
+      MQTT Broker
+            ↓
+   MQTT → Kafka Bridge
+            ↓
+           Kafka
+            ↓
+     Kafka Consumer
+            ↓
+       PostgreSQL
+            ↓
+         FastAPI
+            ↓
+        Dashboard
+```
 
 ---
 
@@ -53,6 +54,16 @@ Dashboard
 - Docker Compose
 - Python venv
 
+### 本系統提供以下 RESTful API 供資料查詢與分析使用：
+
+## 🔌 API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|------------|
+| GET | /sensor/latest | 取得最新一筆感測資料 |
+| GET | /sensor/history | 查詢歷史資料 |
+| GET | /sensor/stats | 取得統計資料（avg / max / min） |
+
 ---
 
 ## 🎯 專案目標
@@ -71,45 +82,52 @@ Dashboard
 edge-sensor-streaming-platform/
 ├── app/
 │   ├── backend/
-│   │   ├── api/                     # FastAPI API（未來擴充）
-│   │   ├── config/                  # 設定管理
+│   │   ├── api/                         # FastAPI API Layer（Router / Endpoints）
+│   │   │   ├── routes/
+│   │   │   │   └── sensor.py
+│   │   │   ├── schemas/                 # Response / Request Schema（Pydantic）
+│   │   │   │   └── sensor.py
+│   │   │   └── __init__.py              # 集中註冊 router
+│   │   │
+│   │   ├── services/                    # Business Logic Layer
+│   │   │   └── sensor_service.py
+│   │   │
+│   │   ├── config/                      # 設定管理
 │   │   │   └── settings.py
 │   │   │
-│   │   ├── database/                # 資料庫相關
-│   │   │   ├── models/              # ORM Model
+│   │   ├── database/                    # 資料庫層
+│   │   │   ├── models/                  # ORM Model（Entity）
 │   │   │   │   └── sensor_data.py
-│   │   │   ├── repositories/        # 資料存取層（CRUD）
+│   │   │   ├── repositories/            # Data Access Layer（CRUD / Query）
 │   │   │   │   └── sensor_repository.py
-│   │   │   └── connection.py        # DB 連線設定
+│   │   │   └── connection.py            # DB 連線設定
 │   │   │
-│   │   ├── messaging/               # 訊息處理（MQTT / Kafka）
-│   │   │   ├── bridges/             # MQTT → Kafka
+│   │   ├── messaging/                   # 訊息處理（MQTT / Kafka）
+│   │   │   ├── bridges/                 # MQTT → Kafka Bridge
 │   │   │   │   └── mqtt_to_kafka.py
 │   │   │   │
 │   │   │   ├── kafka/
-│   │   │   │   ├── consumers/       # Kafka Consumer（落地 DB）
+│   │   │   │   ├── consumers/           # Kafka Consumer（寫入 DB）
 │   │   │   │   │   └── sensor_consumer.py
-│   │   │   │   └── producers/       # Kafka Producer（預留）
+│   │   │   │   └── producers/           # Kafka Producer（預留）
 │   │   │   │
 │   │   │   └── mqtt/
-│   │   │       ├── publisher/       # MQTT Publisher（模擬裝置）
+│   │   │       ├── publisher/           # MQTT Publisher（模擬裝置）
 │   │   │       │   └── mqtt_publisher.py
-│   │   │       └── mosquitto.conf   # MQTT Broker 設定
+│   │   │       └── mosquitto.conf       # MQTT Broker 設定
 │   │
-│   └── main.py                     # FastAPI entrypoint（含 lifespan + consumer）
+│   └── main.py                         # FastAPI 入口（lifespan + Kafka consumer）
 │
-├── dashboard/                      # 儀表板（未來實作）
-├── doc/                            # 文件（架構 / 設計）
-├── esp32/                          # ESP32 程式（實體裝置）
+├── dashboard/                          # Dashboard（Streamlit / React）
+├── docs/                               # 架構文件 / 設計說明
+├── esp32/                              # ESP32 裝置端程式
 │
-├── mqtt/                           # MQTT 相關設定（若有額外配置）
-│
-├── docker-compose.yml              # Kafka / MQTT / PostgreSQL
-├── .env                            # 環境變數
-├── requirements.txt                # Python 套件
+├── docker-compose.yml                  # Kafka / MQTT / PostgreSQL
+├── .env                                # 環境變數
+├── requirements.txt                    # Python 套件
 ├── README.md
 └── .gitignore
-
+```
 
 ---
 
@@ -168,10 +186,7 @@ PostgreSQL（Storage）
 }
 
 🗺 未來規劃
-🔹 API 層
- /sensor/latest
- /sensor/history
- /sensor/stats
+
 🔹 Dashboard
  即時監控（溫度 / 濕度 / 震動）
  Grafana / Streamlit / React
