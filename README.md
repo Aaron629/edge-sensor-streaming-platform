@@ -31,6 +31,26 @@
 
 ---
 
+## 🏗 Architecture
+
+本專案採用事件驅動（Event-Driven）與分層式架構（Layered Architecture）設計：
+
+### 🔹 Data Flow（資料流）
+ESP32 → MQTT → Kafka → PostgreSQL → FastAPI → Dashboard
+
+### 🔹 Backend Layer
+- API Layer（FastAPI）：負責接收請求與回應
+- Service Layer：處理業務邏輯
+- Repository Layer：負責資料庫存取
+- Database Layer：PostgreSQL
+
+此設計讓系統具備：
+- 高擴展性（Scalability）
+- 鬆耦合（Loose Coupling）
+- 易於維護（Maintainability）
+
+---
+
 ## 🛠 技術棧
 
 ### 🔌 Device / Publisher
@@ -54,9 +74,9 @@
 - Docker Compose
 - Python venv
 
-### 本系統提供以下 RESTful API 供資料查詢與分析使用：
-
 ## 🔌 API Endpoints
+
+本系統提供以下 RESTful API 供資料查詢與分析使用：
 
 | Method | Endpoint | Description |
 |--------|----------|------------|
@@ -152,31 +172,25 @@ uvicorn app.main:app --reload --port 8081
 python -m app.backend.messaging.mqtt.publisher.mqtt_publisher
 ```
 
-🎯 專案亮點
-🔥 Event-Driven Architecture
+## 🎯 專案亮點
 
+### 🔥 Event-Driven Architecture
 使用 Kafka 作為資料中介，實現鬆耦合資料流
 
-🔥 Streaming Pipeline
-
+### 🔥 Real-time Streaming Pipeline
 資料從裝置即時流入資料庫（非批次處理）
 
-🔥 Schema + Raw Data 設計
+### 🔥 Hybrid Data Model（Schema + Raw）
+- 結構化欄位：提升查詢效率
+- raw_payload：保留完整原始資料
 
-同時支援：
-
-查詢效率（結構化欄位）
-完整回溯（raw_payload）
-🔥 IoT + Data Engineering 整合
-
-整合：
-
-MQTT（IoT）
-Kafka（Streaming）
-PostgreSQL（Storage）
+### 🔥 IoT × Data Engineering 整合
+整合 MQTT、Kafka 與 PostgreSQL，實現完整資料流架構
 
 
-📡 資料格式（範例）
+## 📡 資料格式（範例）
+
+```json
 {
   "device_id": "esp32-001",
   "temperature": 28.5,
@@ -184,15 +198,16 @@ PostgreSQL（Storage）
   "vibration": 0.23,
   "recorded_at": "2026-04-10T23:00:00+08:00"
 }
+```
 
-🗺 未來規劃
+## ✅ 成果展示
 
-🔹 Dashboard
- 即時監控（溫度 / 濕度 / 震動）
- Grafana / Streamlit / React
-🔹 Data Engineering
- Databricks（Bronze / Silver / Gold）
- 批次與流式分析整合
-🔹 Alerting 系統
- 溫度 / 震動異常偵測
- Kafka-based alert pipeline
+本專案已完成端到端即時資料流整合：
+
+- ✔ ESP32 成功發佈感測資料至 MQTT Broker
+- ✔ MQTT → Kafka Bridge 成功轉送資料
+- ✔ Kafka Consumer 將資料即時寫入 PostgreSQL
+- ✔ FastAPI 提供即時查詢 API（latest / history / stats）
+- ✔ Streamlit Dashboard 即時顯示監控數據
+
+👉 成功實現 IoT → Streaming → Storage → API → Visualization 的完整流程
