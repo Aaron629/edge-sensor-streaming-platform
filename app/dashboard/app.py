@@ -1,5 +1,4 @@
 import time
-from datetime import datetime
 
 import pandas as pd
 import requests
@@ -25,6 +24,7 @@ def safe_round(val, digits=2):
     return round(val, digits) if val is not None else None
 
 
+@st.cache_data(ttl=5)
 def fetch_json(url: str):
     try:
         response = requests.get(url, timeout=5)
@@ -46,15 +46,18 @@ def metric_card(label: str, value, unit: str = ""):
 # -----------------------
 st.sidebar.title("⚙️ Control Panel")
 
-refresh_rate = st.sidebar.slider("Refresh (seconds)", 2, 10, 5)
+device_options = ["ALL", "esp32-001", "esp32-002", "esp32-003"]
+selected_device = st.sidebar.selectbox("Select Device", device_options)
+
+refresh_rate = st.sidebar.slider("Refresh (seconds)", 5, 30, 10)
 st.sidebar.write(f"Current refresh: {refresh_rate} sec")
 
 auto_refresh = st.sidebar.toggle("Auto Refresh", value=True)
 
 history_limit = st.sidebar.selectbox(
     "History limit",
-    options=[30, 50, 100, 200],
-    index=2,
+    options=[100, 200, 300, 500],
+    index=1,
 )
 
 st.sidebar.divider()
@@ -69,11 +72,31 @@ st.caption("Real-time IoT Monitoring Dashboard powered by MQTT, Kafka, FastAPI, 
 
 
 # -----------------------
+# Build Query String
+# -----------------------
+device_query = ""
+if selected_device != "ALL":
+    device_query = f"device_id={selected_device}"
+
+
+def build_url(path: str, extra_query: str = ""):
+    queries = []
+    if device_query:
+        queries.append(device_query)
+    if extra_query:
+        queries.append(extra_query)
+
+    if queries:
+        return f"{BASE_URL}{path}?" + "&".join(queries)
+    return f"{BASE_URL}{path}"
+
+
+# -----------------------
 # Fetch Data
 # -----------------------
-latest, latest_err = fetch_json(f"{BASE_URL}/sensor/latest")
-stats, stats_err = fetch_json(f"{BASE_URL}/sensor/stats")
-history, history_err = fetch_json(f"{BASE_URL}/sensor/history?limit={history_limit}")
+latest, latest_err = fetch_json(build_url("/sensor/latest"))
+stats, stats_err = fetch_json(build_url("/sensor/stats"))
+history, history_err = fetch_json(build_url("/sensor/history", f"limit={history_limit}"))
 
 
 # -----------------------
@@ -99,6 +122,7 @@ if latest_err or stats_err or history_err:
 # Latest Data
 # -----------------------
 st.markdown("## 🔴 Latest Data")
+st.write(f"Current device: **{selected_device}**")
 
 latest_col1, latest_col2, latest_col3, latest_col4 = st.columns([1, 1, 1, 1.2])
 
@@ -136,7 +160,6 @@ if alert_messages:
 else:
     st.success("System status normal")
 
-
 st.divider()
 
 
@@ -168,7 +191,6 @@ with vib_col:
     c2.metric("Max", safe_round(stats["max_vibration"]))
     c3.metric("Min", safe_round(stats["min_vibration"]))
 
-
 st.divider()
 
 
@@ -181,31 +203,51 @@ df = pd.DataFrame(history)
 df["recorded_at"] = pd.to_datetime(df["recorded_at"]).dt.tz_convert("Asia/Taipei")
 df = df.sort_values("recorded_at")
 
+
+def plot_metric(df: pd.DataFrame, metric: str, selected_device: str):
+    if selected_device == "ALL":
+        pivot_df = df.pivot_table(
+            index="recorded_at",
+            columns="device_id",
+            values=metric,
+            aggfunc="last",
+        ).sort_index()
+
+        # 對齊成每秒一筆，再以前一筆補值
+        pivot_df = pivot_df.resample("3s").last().ffill()
+
+        st.line_chart(pivot_df, use_container_width=True)
+    else:
+        single_df = df.set_index("recorded_at")[[metric]].sort_index()
+        st.line_chart(single_df, use_container_width=True)
+
 chart_col1, chart_col2 = st.columns([3, 1])
 
 with chart_col2:
     st.markdown("### Summary")
     st.write(f"Rows loaded: **{len(df)}**")
-    st.write(f"Device ID: **{df['device_id'].iloc[0]}**" if not df.empty else "Device ID: -")
-    st.write(
-        f"Time range: **{df['recorded_at'].min().strftime('%H:%M:%S')} ~ {df['recorded_at'].max().strftime('%H:%M:%S')}**"
-        if not df.empty
-        else "Time range: -"
-    )
+    if not df.empty:
+        unique_devices = ", ".join(sorted(df["device_id"].unique()))
+        st.write(f"Device(s): **{unique_devices}**")
+        st.write(
+            f"Time range: **{df['recorded_at'].min().strftime('%H:%M:%S')} ~ {df['recorded_at'].max().strftime('%H:%M:%S')}**"
+        )
+    else:
+        st.write("Device(s): -")
+        st.write("Time range: -")
 
 with chart_col1:
     st.markdown("### Temperature Trend")
-    st.line_chart(df.set_index("recorded_at")["temperature"], use_container_width=True)
+    plot_metric(df, "temperature", selected_device)
 
     st.markdown("### Humidity Trend")
-    st.line_chart(df.set_index("recorded_at")["humidity"], use_container_width=True)
+    plot_metric(df, "humidity", selected_device)
 
     st.markdown("### Vibration Trend")
-    st.line_chart(df.set_index("recorded_at")["vibration"], use_container_width=True)
-
+    plot_metric(df, "vibration", selected_device)
 
 # -----------------------
-# Raw Table (Optional)
+# Raw Table
 # -----------------------
 with st.expander("🔍 View raw history data"):
     preview_df = df[["device_id", "temperature", "humidity", "vibration", "recorded_at"]].copy()
