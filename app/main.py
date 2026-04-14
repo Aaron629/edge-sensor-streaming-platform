@@ -3,7 +3,7 @@ import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-
+from app.backend.api import router as api_router
 from app.backend.config.settings import settings
 from app.backend.database.connection import Base, engine
 from app.backend.database.models.sensor_data import SensorData
@@ -69,6 +69,5 @@ app = FastAPI(
 )
 
 
-@app.get("/")
-def root():
-    return {"message": "FastAPI is running"}
+app.include_router(api_router)
+
