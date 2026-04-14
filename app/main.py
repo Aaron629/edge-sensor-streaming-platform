@@ -8,15 +8,37 @@ from app.backend.config.settings import settings
 from app.backend.database.connection import Base, engine
 from app.backend.database.models.sensor_data import SensorData
 from app.backend.messaging.kafka.consumers.sensor_consumer import consume_forever
-
+import time
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+def wait_for_db(engine, max_retries=15, delay=2):
+    for i in range(max_retries):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("✅ Database is ready")
+            return
+        except OperationalError as e:
+            logger.warning(f"⏳ DB not ready ({i+1}/{max_retries}): {e}")
+            time.sleep(delay)
+
+    raise RuntimeError("❌ Database is not ready after retries")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 Starting application...")
+
+    # 等 DB ready
+    try:
+        wait_for_db(engine)
+    except Exception as e:
+        logger.exception(f"❌ Database not ready: {e}")
+        raise
 
     # 建表
     try:

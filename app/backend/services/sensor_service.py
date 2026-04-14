@@ -5,8 +5,14 @@ from app.backend.database.repositories.sensor_repository import SensorRepository
 
 class SensorService:
     @staticmethod
-    def get_latest_sensor_data(db: Session):
-        return SensorRepository.get_latest_sensor_data(db)
+    def get_latest_sensor_data(
+        db: Session,
+        device_id: str | None = None,
+    ):
+        return SensorRepository.get_latest_sensor_data(
+            db=db,
+            device_id=device_id,
+        )
 
     @staticmethod
     def get_sensor_history(

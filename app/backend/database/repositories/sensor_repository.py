@@ -22,12 +22,17 @@ class SensorRepository:
         return sensor
 
     @staticmethod
-    def get_latest_sensor_data(db: Session) -> SensorData | None:
-        stmt = (
-            select(SensorData)
-            .order_by(SensorData.recorded_at.desc())
-            .limit(1)
-        )
+    def get_latest_sensor_data(
+        db: Session,
+        device_id: str | None = None,
+    ) -> SensorData | None:
+        stmt = select(SensorData)
+
+        if device_id:
+            stmt = stmt.where(SensorData.device_id == device_id)
+
+        stmt = stmt.order_by(SensorData.recorded_at.desc()).limit(1)
+
         return db.execute(stmt).scalars().first()
 
     @staticmethod

@@ -36,26 +36,33 @@ producer = init_kafka_producer()
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected to MQTT broker.")
-        client.subscribe(MQTT_TOPIC)
-        print(f"Subscribed to topic: {MQTT_TOPIC}")
+        
+        # 🔥 關鍵：訂閱所有裝置
+        topic = "factory/sensor/#"
+        client.subscribe(topic)
+        
+        print(f"Subscribed to topic: {topic}")
     else:
         print(f"Failed to connect to MQTT broker. rc={rc}")
 
-
 def on_message(client, userdata, msg):
     payload = msg.payload.decode("utf-8")
-    print(f"Received from MQTT: {payload}")
+
+    print(f"\n📡 Topic: {msg.topic}")
+    print(f"📦 Payload: {payload}")
 
     try:
         data = json.loads(payload)
+
         producer.send(KAFKA_TOPIC, value=data)
         producer.flush()
-        print(f"Sent to Kafka topic: {KAFKA_TOPIC}")
+
+        print(f"➡️ Sent to Kafka topic: {KAFKA_TOPIC}")
+
     except json.JSONDecodeError as e:
         print(f"JSON decode error: {e}")
     except Exception as e:
         print(f"Kafka send error: {e}")
-
 
 def main():
     client = mqtt.Client()
