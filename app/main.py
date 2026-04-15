@@ -14,6 +14,7 @@ from sqlalchemy.exc import OperationalError
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+logging.getLogger("kafka").setLevel(logging.ERROR)
 
 def wait_for_db(engine, max_retries=15, delay=2):
     for i in range(max_retries):

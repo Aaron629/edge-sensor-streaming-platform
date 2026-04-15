@@ -1,29 +1,30 @@
 from datetime import datetime
+from typing import Optional, Any, Dict
 from pydantic import BaseModel, ConfigDict
 
 
 class SensorDataOut(BaseModel):
     id: int
     device_id: str
-    temperature: float | None = None
-    humidity: float | None = None
-    vibration: float | None = None
+    temperature: Optional[float] = None
+    humidity: Optional[float] = None
+    vibration: Optional[float] = None
     recorded_at: datetime
     created_at: datetime
-    raw_payload: dict
+    raw_payload: Dict[str, Any]
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class SensorStatsOut(BaseModel):
-    avg_temperature: float | None = None
-    max_temperature: float | None = None
-    min_temperature: float | None = None
+    avg_temperature: Optional[float] = None
+    max_temperature: Optional[float] = None
+    min_temperature: Optional[float] = None
 
-    avg_humidity: float | None = None
-    max_humidity: float | None = None
-    min_humidity: float | None = None
+    avg_humidity: Optional[float] = None
+    max_humidity: Optional[float] = None
+    min_humidity: Optional[float] = None
 
-    avg_vibration: float | None = None
-    max_vibration: float | None = None
-    min_vibration: float | None = None
+    avg_vibration: Optional[float] = None
+    max_vibration: Optional[float] = None
+    min_vibration: Optional[float] = None

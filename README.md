@@ -167,10 +167,30 @@ pip install -r requirements.txt
 ```bash
 uvicorn app.main:app --reload --port 8081
 ```
-### 4️⃣ 啟動 Publisher（模擬資料）
+### 4️⃣ 啟動Publisher（模擬多感測器裝置同時發送訊息,指令後方加上裝置ID）
 ```bash
-python -m app.backend.messaging.mqtt.publisher.mqtt_publisher
+ python app/backend/messaging/mqtt/publisher/mqtt_publisher.py esp32-001
+ python app/backend/messaging/mqtt/publisher/mqtt_publisher.py esp32-002
+ python app/backend/messaging/mqtt/publisher/mqtt_publisher.py esp32-003
 ```
+### 5️⃣ 啟動橋接器將訊息打到Kafka（從訂閱的MQTT topic接收資料並轉打至kafka topic）
+
+```bash
+ python app/backend/messaging/bridges/mqtt_to_kafka.py
+```
+### 6️⃣ 啟動 streamlit 儀表板 
+
+```bash
+streamlit run app/dashboard/app.py
+```
+### 全部感測器的相關數值
+![Dashboard](./dashboard/img/1.png)
+
+### 歷史紀錄(溫度趨勢,濕度趨勢)
+![Dashboard](./dashboard/img/2.png)
+
+### 歷史紀錄（震度趨勢,歷史資料表）
+![Dashboard](./dashboard/img/3.png)
 
 ## 🎯 專案亮點
 

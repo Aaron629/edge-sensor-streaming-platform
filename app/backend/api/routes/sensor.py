@@ -1,3 +1,5 @@
+from typing import Optional, List
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -18,7 +20,7 @@ def get_db():
 
 @router.get("/latest", response_model=SensorDataOut)
 def get_latest_sensor(
-    device_id: str | None = Query(default=None),
+    device_id: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
 ):
     data = SensorService.get_latest_sensor_data(
@@ -30,9 +32,9 @@ def get_latest_sensor(
     return data
 
 
-@router.get("/history", response_model=list[SensorDataOut])
+@router.get("/history", response_model=List[SensorDataOut])
 def get_sensor_history(
-    device_id: str | None = Query(default=None),
+    device_id: Optional[str] = Query(default=None),
     limit: int = Query(default=100, ge=1, le=1000),
     db: Session = Depends(get_db),
 ):
@@ -45,7 +47,7 @@ def get_sensor_history(
 
 @router.get("/stats", response_model=SensorStatsOut)
 def get_sensor_stats(
-    device_id: str | None = Query(default=None),
+    device_id: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
 ):
     return SensorService.get_sensor_stats(
