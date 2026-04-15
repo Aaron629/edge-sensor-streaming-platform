@@ -4,7 +4,7 @@ import pandas as pd
 import requests
 import streamlit as st
 
-BASE_URL = "http://127.0.0.1:8081"
+BASE_URL = "http://127.0.0.1:8083"
 
 
 # -----------------------
