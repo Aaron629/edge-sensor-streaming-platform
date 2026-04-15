@@ -6,7 +6,7 @@ MQTT_BROKER = "localhost"
 MQTT_PORT = 1883
 MQTT_TOPIC = "factory/sensor/esp32-001"
 
-KAFKA_BROKER = "localhost:9092"
+KAFKA_BROKER = "localhost:9096"
 KAFKA_TOPIC = "iot.sensor.data"
 
 

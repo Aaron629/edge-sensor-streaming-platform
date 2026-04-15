@@ -1,3 +1,5 @@
+from typing import Optional, List, Dict, Any
+
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
@@ -7,7 +9,7 @@ from app.backend.database.models.sensor_data import SensorData
 class SensorRepository:
 
     @staticmethod
-    def insert_sensor_data(db: Session, data: dict) -> SensorData:
+    def insert_sensor_data(db: Session, data: Dict[str, Any]) -> SensorData:
         sensor = SensorData(
             device_id=data["device_id"],
             temperature=data.get("temperature"),
@@ -24,8 +26,8 @@ class SensorRepository:
     @staticmethod
     def get_latest_sensor_data(
         db: Session,
-        device_id: str | None = None,
-    ) -> SensorData | None:
+        device_id: Optional[str] = None,
+    ) -> Optional[SensorData]:
         stmt = select(SensorData)
 
         if device_id:
@@ -38,9 +40,9 @@ class SensorRepository:
     @staticmethod
     def get_sensor_history(
         db: Session,
-        device_id: str | None = None,
+        device_id: Optional[str] = None,
         limit: int = 100,
-    ) -> list[SensorData]:
+    ) -> List[SensorData]:
         stmt = select(SensorData)
 
         if device_id:
@@ -53,8 +55,8 @@ class SensorRepository:
     @staticmethod
     def get_sensor_stats(
         db: Session,
-        device_id: str | None = None,
-    ) -> dict:
+        device_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
         stmt = select(
             func.avg(SensorData.temperature).label("avg_temperature"),
             func.max(SensorData.temperature).label("max_temperature"),
