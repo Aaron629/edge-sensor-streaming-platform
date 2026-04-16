@@ -26,6 +26,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [selectedDevice, setSelectedDevice] = useState("all");
   const [allDevicesData, setAllDevicesData] = useState<SensorData[]>([]);
+  const [cameraOnline, setCameraOnline] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -78,9 +79,6 @@ function App() {
         <header className="header">
           <h1>IoT Dashboard</h1>
           <p className="subtitle">即時感測器監控畫面</p>
-        </header>
-
-        <section className="toolbar">
           <div className="device-filter">
             <label htmlFor="device-select" className="device-filter-label">
               Device
@@ -96,8 +94,7 @@ function App() {
               <option value="esp32-003">esp32-003</option>
             </select>
           </div>
-        </section>
-
+        </header>
         {selectedDevice === "all" ? (
           <section className="all-devices-grid">
             {allDevicesData.map((device) => (
@@ -132,7 +129,7 @@ function App() {
               </div>
             ))}
           </section>
-        ) : (
+        ) : data ? (
           <>
             <section className="overview-card">
               <div>
@@ -195,26 +192,36 @@ function App() {
               <div className="camera-card">
                 <div className="camera-card-header">
                   <h3>ESP32-CAM Feed</h3>
-                  <span className="camera-status offline">Offline</span>
+                  <span className={`camera-status ${cameraOnline ? "online" : "offline"}`}>
+                    {cameraOnline ? "Online" : "Offline"}
+                  </span>
                 </div>
 
-                <div className="camera-placeholder">
-                  <div className="camera-placeholder-content">
-                    <p className="camera-placeholder-title">No camera signal</p>
-                    <p className="camera-placeholder-subtitle">
-                      Waiting for ESP32-CAM stream...
-                    </p>
-                  </div>
+                <div className="camera-feed-wrapper">
+                  {!cameraOnline && (
+                    <div className="camera-overlay">
+                      <p>No camera signal</p>
+                    </div>
+                  )}
+
+                  <img
+                    src="http://10.225.160.184:81/stream"
+                    className="camera-image"
+                    onLoad={() => setCameraOnline(true)}
+                    onError={() => setCameraOnline(false)}
+                  />
                 </div>
 
                 <div className="camera-meta">
-                  <span>Status: Offline</span>
-                  <span>Last frame: --</span>
+                  <span>Status: {cameraOnline ? "Online" : "Offline"}</span>
+                  <span>
+                    Last frame: {cameraOnline ? new Date().toLocaleTimeString() : "--"}
+                  </span>
                 </div>
               </div>
             </section>
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );
