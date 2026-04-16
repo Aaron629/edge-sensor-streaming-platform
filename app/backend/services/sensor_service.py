@@ -15,6 +15,12 @@ class SensorService:
             db=db,
             device_id=device_id,
         )
+    
+    @staticmethod
+    def get_latest_sensor_each_device(
+        db: Session,
+    ):
+        return SensorRepository.get_latest_sensor_each_device(db=db)
 
     @staticmethod
     def get_sensor_history(
