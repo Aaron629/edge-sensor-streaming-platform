@@ -54,3 +54,12 @@ def get_sensor_stats(
         db=db,
         device_id=device_id,
     )
+
+@router.get("/latest-by-device", response_model=List[SensorDataOut])
+def get_latest_sensor_by_device(
+    db: Session = Depends(get_db),
+):
+    data = SensorService.get_latest_sensor_each_device(db=db)
+    if not data:
+        raise HTTPException(status_code=404, detail="No sensor data found")
+    return data

@@ -40,3 +40,6 @@ Thumbs.db
 # Data (optional)
 postgres_data/
 kafka-data/
+
+# Vite
+.vite/

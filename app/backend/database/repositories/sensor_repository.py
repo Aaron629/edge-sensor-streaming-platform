@@ -36,6 +36,27 @@ class SensorRepository:
         stmt = stmt.order_by(SensorData.recorded_at.desc()).limit(1)
 
         return db.execute(stmt).scalars().first()
+    
+    @staticmethod
+    def get_latest_sensor_each_device(db: Session):
+        device_rows = db.query(SensorData.device_id).distinct().all()
+
+        results = []
+
+        for row in device_rows:
+            device_id = row[0]
+
+            latest = (
+                db.query(SensorData)
+                .filter(SensorData.device_id == device_id)
+                .order_by(SensorData.recorded_at.desc())
+                .first()
+            )
+
+            if latest:
+                results.append(latest)
+
+        return results
 
     @staticmethod
     def get_sensor_history(
