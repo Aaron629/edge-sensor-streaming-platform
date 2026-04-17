@@ -19,6 +19,23 @@ type SensorData = {
   raw_payload: Record<string, unknown>;
 };
 
+type CameraSnapshot = {
+  id: number;
+  device_id: string;
+  sensor_data_id: number | null;
+  snapshot_filename: string;
+  snapshot_type: string;
+  snapshot_path: string;
+  snapshot_url: string | null;
+  content_type: string;
+  file_size: number | null;
+  source_type: string;
+  status: string;
+  captured_at: string;
+  created_at: string;
+  remark: string | null;
+};
+
 function App() {
   const [data, setData] = useState<SensorData | null>(null);
   const [history, setHistory] = useState<SensorData[]>([]);
@@ -28,6 +45,14 @@ function App() {
   const [allDevicesData, setAllDevicesData] = useState<SensorData[]>([]);
   const [cameraOnline, setCameraOnline] = useState(false);
   const cameraStreamUrl = "http://10.225.160.184:81/stream";
+  // 快照相關狀態
+  const [snapshotDevice, setSnapshotDevice] = useState("esp32-001");
+  const [snapshotStart, setSnapshotStart] = useState("");
+  const [snapshotEnd, setSnapshotEnd] = useState("");
+  const [snapshots, setSnapshots] = useState<CameraSnapshot[]>([]);
+  const [activeSnapshotIndex, setActiveSnapshotIndex] = useState(0);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -74,18 +99,59 @@ function App() {
     return <div className="status-text">No data</div>;
   }
 
+  async function handleSnapshotSearch() {
+    try {
+      setSnapshotLoading(true);
+      setSnapshotError(null);
+
+      const params = new URLSearchParams();
+      params.append("device_id", snapshotDevice);
+
+      if (snapshotStart) {
+        params.append("start_at", new Date(snapshotStart).toISOString());
+      }
+
+      if (snapshotEnd) {
+        params.append("end_at", new Date(snapshotEnd).toISOString());
+      }
+
+      params.append("limit", "20");
+
+      const response = await fetch(
+        `http://localhost:8083/camera-snapshots?${params.toString()}`
+      );
+
+      if (!response.ok) {
+        throw new Error("查詢快照失敗");
+      }
+
+      const result: CameraSnapshot[] = await response.json();
+      setSnapshots(result);
+      setActiveSnapshotIndex(0);
+    } catch (err) {
+      console.error(err);
+      setSnapshotError("讀取快照失敗");
+      setSnapshots([]);
+      setActiveSnapshotIndex(0);
+    } finally {
+      setSnapshotLoading(false);
+    }
+  }
+
+  const activeSnapshot = snapshots[activeSnapshotIndex] ?? null;
+
   return (
     <div className="app">
       <div className="container">
-        <header className="header">
-          <h1>IoT Dashboard</h1>
-          <p className="subtitle">即時感測器監控畫面</p>
-          <div className="device-filter">
-            <label htmlFor="device-select" className="device-filter-label">
-              Device
-            </label>
+        <header className="dashboard-header">
+          <div className="header-left">
+            <h1>IoT Dashboard</h1>
+            <p>即時感測器監控畫面</p>
+          </div>
+
+          <div className="header-right">
+            <label>Device</label>
             <select
-              id="device-select"
               value={selectedDevice}
               onChange={(e) => setSelectedDevice(e.target.value)}
             >
@@ -97,39 +163,141 @@ function App() {
           </div>
         </header>
         {selectedDevice === "all" ? (
-          <section className="all-devices-grid">
-            {allDevicesData.map((device) => (
-              <div key={device.device_id} className="device-summary-card">
-                <div className="device-summary-header">
-                  <h2>{device.device_id}</h2>
-                  <span>{new Date(device.recorded_at).toLocaleString()}</span>
+          <>
+            <section className="all-devices-grid">
+              {allDevicesData.map((device) => (
+                <div key={device.device_id} className="device-summary-card">
+                  <div className="device-summary-header">
+                    <h2>{device.device_id}</h2>
+                    <span>{new Date(device.recorded_at).toLocaleString()}</span>
+                  </div>
+
+                  <div className="device-summary-metrics">
+                    <div className="summary-metric">
+                      <span className="label">Temperature</span>
+                      <p className="metric-value">
+                        {device.temperature !== null ? device.temperature.toFixed(2) : "--"}
+                      </p>
+                    </div>
+
+                    <div className="summary-metric">
+                      <span className="label">Humidity</span>
+                      <p className="metric-value">
+                        {device.humidity !== null ? device.humidity.toFixed(2) : "--"}
+                      </p>
+                    </div>
+
+                    <div className="summary-metric">
+                      <span className="label">Vibration</span>
+                      <p className="metric-value">
+                        {device.vibration !== null ? device.vibration.toFixed(2) : "--"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
+              ))}
+            </section>
 
-                <div className="device-summary-metrics">
-                  <div className="summary-metric">
-                    <span className="label">Temperature</span>
-                    <p className="metric-value">
-                      {device.temperature !== null ? device.temperature.toFixed(2) : "--"}
-                    </p>
-                  </div>
-
-                  <div className="summary-metric">
-                    <span className="label">Humidity</span>
-                    <p className="metric-value">
-                      {device.humidity !== null ? device.humidity.toFixed(2) : "--"}
-                    </p>
-                  </div>
-
-                  <div className="summary-metric">
-                    <span className="label">Vibration</span>
-                    <p className="metric-value">
-                      {device.vibration !== null ? device.vibration.toFixed(2) : "--"}
-                    </p>
-                  </div>
+            <section className="snapshot-explorer">
+              <div className="snapshot-explorer-header">
+                <div>
+                  <h2>Snapshot Explorer</h2>
+                  <p>依裝置與時間區段查詢歷史快照</p>
                 </div>
               </div>
-            ))}
-          </section>
+
+              <div className="snapshot-filters">
+                <div className="snapshot-filter-group">
+                  <label htmlFor="snapshot-device">Device</label>
+                  <select
+                    id="snapshot-device"
+                    value={snapshotDevice}
+                    onChange={(e) => setSnapshotDevice(e.target.value)}
+                  >
+                    <option value="esp32-001">esp32-001</option>
+                    <option value="esp32-002">esp32-002</option>
+                    <option value="esp32-003">esp32-003</option>
+                  </select>
+                </div>
+
+                <div className="snapshot-filter-group">
+                  <label htmlFor="snapshot-start">Start</label>
+                  <input
+                    id="snapshot-start"
+                    type="datetime-local"
+                    value={snapshotStart}
+                    onChange={(e) => setSnapshotStart(e.target.value)}
+                  />
+                </div>
+
+                <div className="snapshot-filter-group">
+                  <label htmlFor="snapshot-end">End</label>
+                  <input
+                    id="snapshot-end"
+                    type="datetime-local"
+                    value={snapshotEnd}
+                    onChange={(e) => setSnapshotEnd(e.target.value)}
+                  />
+                </div>
+
+                <button className="snapshot-search-btn" onClick={handleSnapshotSearch}>
+                  Search
+                </button>
+              </div>
+
+              {snapshotLoading ? (
+                <div className="snapshot-empty">Loading snapshots...</div>
+              ) : snapshotError ? (
+                <div className="snapshot-empty">{snapshotError}</div>
+              ) : snapshots.length === 0 ? (
+                <div className="snapshot-empty">尚未查詢，或此區間沒有快照</div>
+              ) : activeSnapshot ? (
+                <div className="snapshot-viewer">
+                  <div className="snapshot-main">
+                    <img
+                      src={activeSnapshot.snapshot_url ?? "/camera-placeholder.jpg"}
+                      alt={activeSnapshot.snapshot_filename}
+                      className="snapshot-main-image"
+                    />
+                  </div>
+
+                  <div className="snapshot-meta">
+                    <span>Device: {activeSnapshot.device_id}</span>
+                    <span>
+                      Captured At: {new Date(activeSnapshot.captured_at).toLocaleString()}
+                    </span>
+                    <span>Type: {activeSnapshot.snapshot_type}</span>
+                  </div>
+
+                  <div className="snapshot-controls">
+                    <button
+                      onClick={() =>
+                        setActiveSnapshotIndex((prev) => Math.max(prev - 1, 0))
+                      }
+                      disabled={activeSnapshotIndex === 0}
+                    >
+                      Prev
+                    </button>
+
+                    <span>
+                      {activeSnapshotIndex + 1} / {snapshots.length}
+                    </span>
+
+                    <button
+                      onClick={() =>
+                        setActiveSnapshotIndex((prev) =>
+                          Math.min(prev + 1, snapshots.length - 1)
+                        )
+                      }
+                      disabled={activeSnapshotIndex === snapshots.length - 1}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          </>
         ) : data ? (
           <>
             <section className="overview-card">
