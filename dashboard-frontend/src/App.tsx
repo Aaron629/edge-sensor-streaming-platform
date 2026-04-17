@@ -27,6 +27,7 @@ function App() {
   const [selectedDevice, setSelectedDevice] = useState("all");
   const [allDevicesData, setAllDevicesData] = useState<SensorData[]>([]);
   const [cameraOnline, setCameraOnline] = useState(false);
+  const cameraStreamUrl = "http://10.225.160.184:81/stream";
 
   useEffect(() => {
     async function fetchData() {
@@ -198,18 +199,26 @@ function App() {
                 </div>
 
                 <div className="camera-feed-wrapper">
-                  {!cameraOnline && (
-                    <div className="camera-overlay">
-                      <p>No camera signal</p>
-                    </div>
-                  )}
-
                   <img
-                    src="http://10.225.160.184:81/stream"
-                    className="camera-image"
+                    src={cameraStreamUrl}
+                    alt="ESP32-CAM feed"
+                    className="camera-image stream-image"
                     onLoad={() => setCameraOnline(true)}
                     onError={() => setCameraOnline(false)}
                   />
+
+                  {!cameraOnline && (
+                    <>
+                      <img
+                        src="/camera-placeholder.jpg"
+                        alt="Camera placeholder"
+                        className="camera-image placeholder-image"
+                      />
+                      <div className="camera-overlay">
+                        <p>No camera signal</p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="camera-meta">
