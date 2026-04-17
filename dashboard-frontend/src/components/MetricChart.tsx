@@ -30,7 +30,11 @@ export default function MetricChart({
 }: Props) {
   const chartData = [...data].reverse().map((item) => ({
     ...item,
-    time: new Date(item.recorded_at).toLocaleTimeString(),
+    time: new Date(item.recorded_at).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }),
   }));
 
   return (
@@ -44,9 +48,10 @@ export default function MetricChart({
 
             <XAxis
               dataKey="time"
-              tick={{ fill: "#94a3b8", fontSize: 12 }}
+              tick={{ fill: "#94a3b8", fontSize: 11 }}
               tickLine={false}
               axisLine={{ stroke: "rgba(148, 163, 184, 0.2)" }}
+              minTickGap={24}
             />
 
             <YAxis
