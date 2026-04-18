@@ -138,6 +138,71 @@ function App() {
     }
   }
 
+  async function handleTakeSnapshot() {
+    try {
+      if (selectedDevice === "all") {
+        setSnapshotError("請先選擇單一裝置再執行快照");
+        return;
+      }
+
+      setSnapshotLoading(true);
+      setSnapshotError(null);
+
+      const payload = {
+        device_id: selectedDevice,
+        snapshot_type: "manual",
+        sensor_data_id: data?.id ?? null,
+      };
+
+      console.log("take snapshot payload:", payload);
+
+      const response = await fetch("http://localhost:8083/camera-snapshots", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await response.text();
+      console.log("snapshot response status:", response.status);
+      console.log("snapshot response body:", responseText);
+
+      if (!response.ok) {
+        throw new Error(`建立快照失敗: ${response.status} ${responseText}`);
+      }
+
+      const createdSnapshot: CameraSnapshot = JSON.parse(responseText);
+      console.log("Snapshot created:", createdSnapshot);
+
+      // 建立成功後刷新該裝置的快照列表
+      const params = new URLSearchParams();
+      params.append("device_id", selectedDevice);
+      params.append("limit", "20");
+
+      const listResponse = await fetch(
+        `http://localhost:8083/camera-snapshots?${params.toString()}`
+      );
+
+      const listText = await listResponse.text();
+      console.log("snapshot list status:", listResponse.status);
+      console.log("snapshot list body:", listText);
+
+      if (!listResponse.ok) {
+        throw new Error(`重新整理快照失敗: ${listResponse.status} ${listText}`);
+      }
+
+      const result: CameraSnapshot[] = JSON.parse(listText);
+      setSnapshots(result);
+      setActiveSnapshotIndex(0);
+    } catch (err) {
+      console.error(err);
+      setSnapshotError(err instanceof Error ? err.message : "建立快照失敗");
+    } finally {
+      setSnapshotLoading(false);
+    }
+  }
+
   const activeSnapshot = snapshots[activeSnapshotIndex] ?? null;
 
   return (
@@ -361,9 +426,20 @@ function App() {
               <div className="camera-card">
                 <div className="camera-card-header">
                   <h3>ESP32-CAM Feed</h3>
-                  <span className={`camera-status ${cameraOnline ? "online" : "offline"}`}>
-                    {cameraOnline ? "Online" : "Offline"}
-                  </span>
+
+                  <div className="camera-card-actions">
+                    <span className={`camera-status ${cameraOnline ? "online" : "offline"}`}>
+                      {cameraOnline ? "Online" : "Offline"}
+                    </span>
+
+                    <button
+                      className="snapshot-trigger-btn"
+                      onClick={handleTakeSnapshot}
+                      disabled={snapshotLoading}
+                    >
+                      {snapshotLoading ? "Saving..." : "Take Snapshot"}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="camera-feed-wrapper">
