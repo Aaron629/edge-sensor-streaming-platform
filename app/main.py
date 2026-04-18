@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.backend.api import router as api_router
 from app.backend.config.settings import settings
 from app.backend.database.connection import Base, engine
@@ -101,6 +102,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/storage", StaticFiles(directory="storage"), name="storage")
 
 app.include_router(api_router)
 
