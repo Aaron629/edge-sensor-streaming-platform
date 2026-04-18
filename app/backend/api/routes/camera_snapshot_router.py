@@ -30,7 +30,7 @@ def create_camera_snapshot(
     payload: CameraSnapshotTrigger,
     db: Session = Depends(get_db),
 ):
-    snapshot_payload = CameraSnapshotService.build_mock_snapshot_payload(payload)
+    snapshot_payload = CameraSnapshotService.build_stream_snapshot_payload(payload)
 
     snapshot = CameraSnapshotRepository.insert_camera_snapshot(
         db=db,

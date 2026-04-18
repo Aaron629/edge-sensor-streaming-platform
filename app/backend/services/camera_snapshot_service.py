@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Tuple
-import shutil
+import requests
 
 from app.backend.api.schemas.camera_snapshot import (
     CameraSnapshotCreate,
@@ -16,7 +16,10 @@ class SnapshotSourceType:
 
 class CameraSnapshotService:
     SNAPSHOT_ROOT = Path("storage/snapshots")
-    MOCK_IMAGE_PATH = Path("app/static/mock/camera-placeholder.png")
+    BASE_URL = "http://localhost:8083"
+
+    # 依你目前前端 stream URL 推測，capture 多半是這個
+    CAMERA_CAPTURE_URL = "http://10.225.160.184/capture"
 
     @staticmethod
     def ensure_snapshot_dir(device_id: str, captured_at: datetime) -> Path:
@@ -33,11 +36,30 @@ class CameraSnapshotService:
         return f"{device_id}_{captured_at.strftime('%Y%m%d_%H%M%S')}.jpg"
 
     @staticmethod
-    def save_mock_snapshot_file(device_id: str, captured_at: datetime) -> Tuple[str, str, int]:
-        if not CameraSnapshotService.MOCK_IMAGE_PATH.exists():
-            raise FileNotFoundError(
-                f"Mock image not found: {CameraSnapshotService.MOCK_IMAGE_PATH}"
+    def fetch_camera_snapshot() -> bytes:
+        """
+        從 ESP32-CAM 抓取單張圖片
+        """
+        response = requests.get(
+            CameraSnapshotService.CAMERA_CAPTURE_URL,
+            timeout=10,
+        )
+        response.raise_for_status()
+
+        content_type = response.headers.get("content-type", "")
+        if "image" not in content_type.lower():
+            raise ValueError(
+                f"Camera capture did not return an image. content-type={content_type}"
             )
+
+        return response.content
+
+    @staticmethod
+    def save_stream_snapshot_file(
+        device_id: str,
+        captured_at: datetime,
+    ) -> Tuple[str, str, int]:
+        image_bytes = CameraSnapshotService.fetch_camera_snapshot()
 
         folder = CameraSnapshotService.ensure_snapshot_dir(
             device_id=device_id,
@@ -49,21 +71,28 @@ class CameraSnapshotService:
         )
         filepath = folder / filename
 
-        shutil.copy(CameraSnapshotService.MOCK_IMAGE_PATH, filepath)
+        with open(filepath, "wb") as f:
+            f.write(image_bytes)
 
         file_size = filepath.stat().st_size
         return filename, str(filepath), file_size
 
     @staticmethod
-    def build_mock_snapshot_payload(trigger: CameraSnapshotTrigger) -> CameraSnapshotCreate:
+    def build_stream_snapshot_payload(
+        trigger: CameraSnapshotTrigger,
+    ) -> CameraSnapshotCreate:
         captured_at = datetime.now(timezone.utc)
 
-        filename, filepath, file_size = CameraSnapshotService.save_mock_snapshot_file(
+        filename, filepath, file_size = CameraSnapshotService.save_stream_snapshot_file(
             device_id=trigger.device_id,
             captured_at=captured_at,
         )
-        # 前端存取快照路徑（實際部署時可能需要調整 URL 結構）
-        snapshot_url = f"/storage/snapshots/{trigger.device_id}/{captured_at.strftime('%Y-%m-%d')}/{filename}"
+
+        relative_url = (
+            f"/storage/snapshots/"
+            f"{trigger.device_id}/{captured_at.strftime('%Y-%m-%d')}/{filename}"
+        )
+        snapshot_url = f"{CameraSnapshotService.BASE_URL}{relative_url}"
 
         return CameraSnapshotCreate(
             device_id=trigger.device_id,
@@ -74,8 +103,8 @@ class CameraSnapshotService:
             snapshot_url=snapshot_url,
             content_type="image/jpeg",
             file_size=file_size,
-            source_type=SnapshotSourceType.MOCK,
+            source_type=SnapshotSourceType.STREAM,
             status="success",
             captured_at=captured_at,
-            remark="Mock snapshot generated for testing",
+            remark="Snapshot captured from ESP32-CAM",
         )
